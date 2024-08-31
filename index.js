@@ -115,12 +115,13 @@ function handleList(req, res) {
 	}
 	const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
 	const skip = parseInt(extra.skip || 0)
+	const genre = extra.genre
 	if (listIds.length === 1) {
-		needle.get(`https://mdblist.com/api/lists/${listIds[0]}/items?apikey=${mdbListKey}`, { follow_max: 3 }, (err, resp, body) => {
+		needle.get(`https://mdblist.com/api/lists/${listIds[0]}/items?apikey=${mdbListKey}&append_to_response=genre`, { follow_max: 3 }, (err, resp, body) => {
 			if (!err && resp.statusCode === 200 && ((body || [])[0] || {}).title) {
 				res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
 				res.json({
-					metas: body.filter(el => (!!el.imdb_id)).map(obj => ({
+					metas: body.filter(el => (!!el.imdb_id && (!genre || (el.genre || []).includes(genre)))).map(obj => ({
 						id: obj.imdb_id,
 						imdb_id: obj.imdb_id,
 						name: obj.title,
