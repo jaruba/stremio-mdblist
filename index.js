@@ -60,7 +60,7 @@ const catalogTemplate = {
 
 app.get('/manifest.json', (req, res) => {
 	const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
-	if (manifestClone.behaviorHints)
+	if (!manifestClone.behaviorHints)
 		manifestClone.behaviorHints = {}
 	manifestClone.behaviorHints.configurable = true
 	manifestClone.behaviorHints.configurationRequired = true
