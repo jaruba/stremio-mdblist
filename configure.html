@@ -1,0 +1,157 @@
+<html>
+    <head>
+        <title>MDBList Addon</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="Stremio addon for the RPDB Addon">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.5/build/pure-min.css">
+        <style>
+            img {
+                border: none;
+                padding: none;
+            }
+            a {
+                text-decoration: none;
+                color: #0078e7;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            #loginLink button {
+                background-color: #008CBA;
+                border: none;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+            }
+            #replaceLink button {
+                background-color: #04AA6D;
+                border: none;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+            }
+            #revertLink button {
+                background-color: #f44336;
+                border: none;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+            }
+            .pure-button-primary {
+                background-color: #008CBA;
+                border: none;
+                color: white;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border-radius: 0;
+            }
+            a {
+                color: #008CBA;
+            }
+        </style>
+    </head>
+    <body>
+        <center>
+            <br/><br/>
+            <img src="https://mdblist.com/static/mdblist.png" style="max-width: 100px">
+            <br/>
+            <h2>MDBList</h2>
+            <br/>
+            Load your lists from MDBList in Stremio. You can optionally use a RPDB key to add posters with ratings to the lists.
+            <br/><br/>
+            <div>
+                <form class="pure-form pure-form-aligned" id="api-key-form" onsubmit="load_api_key();return false">
+                    <fieldset>
+                        <div class="pure-control-group">
+                            <span style="font-size: 87%; opacity: 0.65">Get MDBList API Key from <a href="https://mdblist.com/preferences/" target="_blank">this page</a></span>
+                            <div style="height: 10px"></div>
+                            <input type="text" id="api-key" placeholder="MDBList API Key" style="width: 230px; max-width: 100%;" />
+                            <div style="height: 20px"></div>
+                            <span style="font-size: 87%; opacity: 0.65">Get RPDB API Key from <a href="https://www.patreon.com/rpdb" target="_blank">this page</a></span>
+                            <div style="height: 10px"></div>
+                            <input type="text" id="rpdb-api-key" placeholder="RPDB API Key (optional)" style="width: 230px; max-width: 100%;" />
+                            <div style="height: 20px"></div>
+                            <span class="pure-form-message-inline">
+                                &nbsp;<button type="submit" class="pure-button pure-button-primary">Load</button>
+                            </span>
+                        </div>
+                    </fieldset>
+                </form>
+                <div id="api-key-error-1" style="display: none; opacity: 0.7">
+                    Error: Using a MDBList API key is mandatory.
+                    <br/><br/><br/>
+                </div>
+                <div id="api-key-error-2" style="display: none; opacity: 0.7">
+                    Error: MDBList API key is not valid, please try again.
+                    <br/><br/><br/>
+                </div>
+            </div>
+            <div id="opts-holder" style="display: none">
+            </div>
+            <br/><br/>
+        </center>
+        <script>
+
+            let userToken = false
+            let apiKey = false
+            let rpdbApiKey = false
+
+            function load_api_key() {
+                apiKey = $('#api-key').val()
+                rpdbApiKey = $('#rpdb-api-key').val()
+                if ($('#api-key-error-1').is(':visible'))
+                    $('#api-key-error-1').hide()
+                if ($('#api-key-error-2').is(':visible'))
+                    $('#api-key-error-2').hide()
+                if (!apiKey) {
+                    $('#api-key-error-1').show()
+                    return
+                }
+                $.get(`https://mdblist.com/api/lists/user/?apikey=${apiKey}`, function ( data ) {
+                    if ((data || {}).error || !Array.isArray(data)) {
+                        $('#api-key').val('')
+                        $('#api-key-error-2').show()
+                    } else {
+                        let colorId = 0
+                        data = data.map(list => {
+                            colorId = colorId === 1 ? 0 : 1
+                            const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
+                            let listLink = `stremio://1fe84bc728af-stremio-mdblist.baby-beamup.club/${list.id}/${apiKey}/manifest.json`
+                            if (rpdbApiKey) {
+                                listLink = `stremio://1fe84bc728af-stremio-mdblist.baby-beamup.club/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
+                            }
+                            return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${list.items} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                        })
+                        $('#api-key-form').hide()
+                        $('#opts-holder').append(data.join(''))
+                        $('#opts-holder').show()
+                    }
+                }).fail(function() {
+                    $('#api-key').val('')
+                    $('#api-key-error-2').show()
+                });
+
+            }
+        </script>
+    </body>
+</html>

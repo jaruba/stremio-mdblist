@@ -22,7 +22,7 @@ const manifestTemplate = {
    "logo": "https://mdblist.com/static/mdblist.png",
    "version": "0.1.0",
    "description": "Addon for MDBList custom lists, optionally supports rating posters from RPDB.",
-   "name": "mDBList",
+   "name": "MDBList",
    "resources": [
       "catalog",
    ],
@@ -57,6 +57,19 @@ const catalogTemplate = {
      ],
      "name": "List"
 }
+
+app.get('/manifest.json', (req, res) => {
+	const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
+	if (manifestClone.behaviorHints)
+		manifestClone.behaviorHints = {}
+	manifestClone.behaviorHints.configurable = true
+	manifestClone.behaviorHints.configurationRequired = true
+	res.json(manifestClone)
+})
+
+app.get('/configure', (req, res) => {
+	res.sendFile('configure.html')
+})
 
 app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 	const listIds = (req.params.listIds || '').split(',')
@@ -95,7 +108,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 
 const perPage = 100
 
-app.get('/:listIds/:mdbListKey/catalog/:type/:slug/:extra?.json', (req, res) => {
+app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
 	const listIds = (req.params.listIds || '').split(',')
 	if (!listIds.length) {
 		res.status(500).send('Invalid mDBList list IDs')
@@ -133,6 +146,8 @@ app.get('/:listIds/:mdbListKey/catalog/:type/:slug/:extra?.json', (req, res) => 
 					if (((body || {}).metasDetailed || []).length) {
 						res.json({
 							metas: body.metasDetailed.map((el, ij) => {
+								if (el.id && el.id.startsWith('tt') && userKey)
+									el.poster = `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${el.id}.jpg?fallback=true`
 								return el || items[ij]
 							})
 						})
