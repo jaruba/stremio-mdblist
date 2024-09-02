@@ -3,6 +3,7 @@ const needle = require('needle')
 const app = express()
 const cors = require('cors')
 const qs = require('querystring')
+const path = require('path')
 
 app.use(cors())
 
@@ -68,7 +69,7 @@ app.get('/manifest.json', (req, res) => {
 })
 
 app.get('/configure', (req, res) => {
-	res.sendFile('configure.html')
+	res.sendFile(path.resolve('./configure.html'))
 })
 
 app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
