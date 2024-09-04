@@ -147,9 +147,10 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 					if (((body || {}).metasDetailed || []).length) {
 						res.json({
 							metas: body.metasDetailed.map((el, ij) => {
+								el = el || items[ij]
 								if (el.id && el.id.startsWith('tt') && userKey)
 									el.poster = `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${el.id}.jpg?fallback=true`
-								return el || items[ij]
+								return el
 							})
 						})
 					} else {
