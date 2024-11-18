@@ -1,8 +1,8 @@
 <html>
     <head>
-        <title>MDBList Addon</title>
+        <title>MDBList Stremio Addon</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="Stremio addon for the RPDB Addon">
+        <meta name="description" content="Stremio addon for MDBList">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.5/build/pure-min.css">
         <style>
@@ -12,46 +12,10 @@
             }
             a {
                 text-decoration: none;
-                color: #0078e7;
+                color: #008CBA;
             }
             a:hover {
                 text-decoration: underline;
-            }
-            #loginLink button {
-                background-color: #008CBA;
-                border: none;
-                color: white;
-                padding: 15px 32px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
-            }
-            #replaceLink button {
-                background-color: #04AA6D;
-                border: none;
-                color: white;
-                padding: 15px 32px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
-            }
-            #revertLink button {
-                background-color: #f44336;
-                border: none;
-                color: white;
-                padding: 15px 32px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
             }
             .pure-button-primary {
                 background-color: #008CBA;
@@ -82,9 +46,6 @@
                 border: 2px solid #008CBA;
                 color: white;
             }
-            a {
-                color: #008CBA;
-            }
         </style>
     </head>
     <body>
@@ -94,8 +55,10 @@
             <br/>
             <h2>MDBList</h2>
             <br/>
-            Load your lists from MDBList in Stremio. You can optionally use a RPDB key to add posters with ratings to the lists.
-            <br/><br/>
+            <span id="addon-description">
+                Load your lists from MDBList in Stremio. You can optionally use a RPDB key to add posters with ratings to the lists.
+                <br/><br/>
+            </span>
             <div>
                 <form class="pure-form pure-form-aligned" id="api-key-form" onsubmit="load_api_key();return false">
                     <fieldset>
@@ -109,7 +72,7 @@
                             <input type="text" id="rpdb-api-key" placeholder="RPDB API Key (optional)" style="width: 230px; max-width: 100%;" />
                             <div style="height: 20px"></div>
                             <span class="pure-form-message-inline">
-                                &nbsp;<button type="submit" class="pure-button pure-button-primary">Load</button>
+                                &nbsp;<button type="submit" class="pure-button pure-button-primary">Load Lists</button>
                             </span>
                         </div>
                     </fieldset>
@@ -122,7 +85,7 @@
                     Error: MDBList API key is not valid, please try again.
                     <br/><br/><br/>
                 </div>
-                <span class="pure-form-message-inline">
+                <span class="pure-form-message-inline" id="about-button">
                     <form action="/what_is_mdblist">
                         &nbsp;<button type="submit" class="pure-button pure-button-primary-reverse">What is MDBList?</button>
                     </form>
@@ -134,7 +97,6 @@
         </center>
         <script>
 
-            let userToken = false
             let apiKey = false
             let rpdbApiKey = false
 
@@ -149,7 +111,7 @@
                     $('#api-key-error-1').show()
                     return
                 }
-                $.get(`https://mdblist.com/api/lists/user/?apikey=${apiKey}`, function ( data ) {
+                $.get(`https://api.mdblist.com/lists/user/?apikey=${apiKey}`, function ( data ) {
                     if ((data || {}).error || !Array.isArray(data)) {
                         $('#api-key').val('')
                         $('#api-key-error-2').show()
@@ -164,6 +126,8 @@
                             }
                             return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${list.items} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
                         })
+                        $('#addon-description').hide()
+                        $('#about-button').hide()
                         $('#api-key-form').hide()
                         $('#opts-holder').append(data.join(''))
                         $('#opts-holder').show()
