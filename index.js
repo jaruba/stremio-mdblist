@@ -7,13 +7,6 @@ const path = require('path')
 
 app.use(cors())
 
-function attachHeaders(resp, res) {
-	if (resp.headers['cache-control'])
-		res.setHeader('Cache-Control', resp.headers['cache-control'])
-	if (resp.headers['content-type'])
-		res.setHeader('Content-Type', resp.headers['content-type'])
-}
-
 function isUserKeySane(key) {
 	return key && [0,1,2,3,4].find(el => key.startsWith(`t${el}-`)) !== undefined
 }
@@ -131,7 +124,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 	if (listIds.length === 1) {
 		needle.get(`https://mdblist.com/api/lists/${listIds[0]}/items?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`, { follow_max: 3 }, (err, resp, body) => {
 			if (!err && resp.statusCode === 200 && ((body || [])[0] || {}).title) {
-				res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
+				res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
 				const items = body.filter(el => (!!el.imdb_id && (!genre || (el.genre || []).includes(genre)))).map(obj => ({
 					id: obj.imdb_id,
 					imdb_id: obj.imdb_id,
