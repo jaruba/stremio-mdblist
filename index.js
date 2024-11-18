@@ -65,6 +65,10 @@ app.get('/configure', (req, res) => {
 	res.sendFile(path.resolve('./configure.html'))
 })
 
+app.get('/what_is_mdblist', (req, res) => {
+	res.sendFile(path.resolve('./what_is_mdblist.html'))
+})
+
 app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 	const listIds = (req.params.listIds || '').split(',')
 	if (!listIds.length) {

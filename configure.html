@@ -65,6 +65,23 @@
                 cursor: pointer;
                 border-radius: 0;
             }
+            .pure-button-primary-reverse {
+                background-color: transparent;
+                border: 2px solid #008CBA;
+                color: #008CBA;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border-radius: 0;
+            }
+            .pure-button-primary-reverse:hover {
+                background-color: #008CBA;
+                border: 2px solid #008CBA;
+                color: white;
+            }
             a {
                 color: #008CBA;
             }
@@ -105,6 +122,11 @@
                     Error: MDBList API key is not valid, please try again.
                     <br/><br/><br/>
                 </div>
+                <span class="pure-form-message-inline">
+                    <form action="/what_is_mdblist">
+                        &nbsp;<button type="submit" class="pure-button pure-button-primary-reverse">What is MDBList?</button>
+                    </form>
+                </span>
             </div>
             <div id="opts-holder" style="display: none">
             </div>
