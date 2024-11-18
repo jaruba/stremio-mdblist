@@ -97,6 +97,8 @@
         </center>
         <script>
 
+            const addonDomain = '1fe84bc728af-stremio-mdblist.baby-beamup.club'
+
             let apiKey = false
             let rpdbApiKey = false
 
@@ -120,9 +122,9 @@
                         data = data.map(list => {
                             colorId = colorId === 1 ? 0 : 1
                             const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
-                            let listLink = `stremio://1fe84bc728af-stremio-mdblist.baby-beamup.club/${list.id}/${apiKey}/manifest.json`
+                            let listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/manifest.json`
                             if (rpdbApiKey) {
-                                listLink = `stremio://1fe84bc728af-stremio-mdblist.baby-beamup.club/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
+                                listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
                             }
                             return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${list.items} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
                         })

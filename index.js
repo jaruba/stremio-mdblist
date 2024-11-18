@@ -81,7 +81,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 		return
 	}
 	if (listIds.length === 1) {
-		needle.get(`https://mdblist.com/api/lists/${listIds[0]}?apikey=${mdbListKey}`, { follow_max: 3 }, (err, resp, body) => {
+		needle.get(`https://api.mdblist.com/lists/${listIds[0]}/?apikey=${mdbListKey}`, { follow_max: 3 }, (err, resp, body) => {
 			if (!err && resp.statusCode === 200 && ((body || [])[0] || {}).name) {
 				const type = body[0].mediatype === 'show' ? 'series' : 'movie'
 				const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
@@ -100,7 +100,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 			}
 		})
 	} else {
-		res.status(500).send('Too maby list IDs')
+		res.status(500).send('Too many list IDs')
 	}
 })
 
@@ -125,43 +125,50 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 	const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
 	const skip = parseInt(extra.skip || 0)
 	const genre = extra.genre
+	const type = req.params.type
 	if (listIds.length === 1) {
-		needle.get(`https://mdblist.com/api/lists/${listIds[0]}/items?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`, { follow_max: 3 }, (err, resp, body) => {
-			if (!err && resp.statusCode === 200 && ((body || [])[0] || {}).title) {
-				res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
-				const items = body.filter(el => (!!el.imdb_id && (!genre || (el.genre || []).includes(genre)))).map(obj => ({
-					id: obj.imdb_id,
-					imdb_id: obj.imdb_id,
-					name: obj.title,
-					releaseInfo: obj.release_year + '',
-					type: obj.mediatype === 'show' ? 'series' : 'movie',
-					poster: userKey ? `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${obj.imdb_id}.jpg?fallback=true` : `https://images.metahub.space/poster/small/${obj.imdb_id}/img`,
-					logo: `https://images.metahub.space/logo/medium/${obj.imdb_id}/img`,
-					background: `https://images.metahub.space/background/medium/${obj.imdb_id}/img`,
-				}))
-				const imdbIds = items.map(el => el.imdb_id).join(',')
-				needle.get(`https://v3-cinemeta.strem.io/catalog/${req.params.type}/last-videos/lastVideosIds=${imdbIds}.json`, (err, resp, body) => {
-					if (((body || {}).metasDetailed || []).length) {
-						res.json({
-							metas: body.metasDetailed.map((el, ij) => {
-								el = el || items[ij]
-								if (el.id && el.id.startsWith('tt') && userKey)
-									el.poster = `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${el.id}.jpg?fallback=true`
-								return el
+		needle.get(`https://api.mdblist.com/lists/${listIds[0]}/items/?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`, { follow_max: 3 }, (err, resp, mdbBody) => {
+			if (!err && resp.statusCode === 200) {
+				const mdbType = type === 'movie' ? 'movies' : 'shows'
+				if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
+					body = mdbBody[mdbType]
+					res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+					const items = body.filter(el => (!!el.imdb_id && (!genre || (el.genre || []).includes(genre)))).map(obj => ({
+						id: obj.imdb_id,
+						imdb_id: obj.imdb_id,
+						name: obj.title,
+						releaseInfo: obj.release_year + '',
+						type: obj.mediatype === 'show' ? 'series' : 'movie',
+						poster: userKey ? `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${obj.imdb_id}.jpg?fallback=true` : `https://images.metahub.space/poster/small/${obj.imdb_id}/img`,
+						logo: `https://images.metahub.space/logo/medium/${obj.imdb_id}/img`,
+						background: `https://images.metahub.space/background/medium/${obj.imdb_id}/img`,
+					}))
+					const imdbIds = items.map(el => el.imdb_id).join(',')
+					needle.get(`https://v3-cinemeta.strem.io/catalog/${type}/last-videos/lastVideosIds=${imdbIds}.json`, (err, resp, body) => {
+						if (((body || {}).metasDetailed || []).length) {
+							res.json({
+								metas: body.metasDetailed.map((el, ij) => {
+									el = el || items[ij]
+									if (el.id && el.id.startsWith('tt') && userKey)
+										el.poster = `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${el.id}.jpg?fallback=true`
+									return el
+								})
 							})
-						})
-					} else {
-						res.json({
-							metas: items
-						})
-					}
-				})
+						} else {
+							res.json({
+								metas: items
+							})
+						}
+					})
+				} else {
+					res.status(500).send('No results in mDBList list')
+				}
 			} else {
 				res.status(500).send('Error from mDBList API')
 			}
 		})
 	} else {
-		res.status(500).send('Too maby list IDs')
+		res.status(500).send('Too many list IDs')
 	}
 })
 
