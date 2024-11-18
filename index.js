@@ -127,13 +127,16 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 	const genre = extra.genre
 	const type = req.params.type
 	if (listIds.length === 1) {
-		needle.get(`https://api.mdblist.com/lists/${listIds[0]}/items/?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`, { follow_max: 3 }, (err, resp, mdbBody) => {
+		let url = `https://api.mdblist.com/lists/${listIds[0]}/items/?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
+		if (genre)
+			url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+		needle.get(url, { follow_max: 3 }, (err, resp, mdbBody) => {
 			if (!err && resp.statusCode === 200) {
 				const mdbType = type === 'movie' ? 'movies' : 'shows'
 				if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
 					body = mdbBody[mdbType]
 					res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
-					const items = body.filter(el => (!!el.imdb_id && (!genre || (el.genre || []).includes(genre)))).map(obj => ({
+					const items = body.map(obj => ({
 						id: obj.imdb_id,
 						imdb_id: obj.imdb_id,
 						name: obj.title,
@@ -161,7 +164,9 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 						}
 					})
 				} else {
-					res.status(500).send('No results in mDBList list')
+					res.json({
+						metas: []
+					})
 				}
 			} else {
 				res.status(500).send('Error from mDBList API')
