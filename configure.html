@@ -85,9 +85,17 @@
                     Error: MDBList API key is not valid, please try again.
                     <br/><br/><br/>
                 </div>
-                <span class="pure-form-message-inline" id="about-button">
-                    <form action="/what_is_mdblist">
-                        &nbsp;<button type="submit" class="pure-button pure-button-primary-reverse">What is MDBList?</button>
+                <div id="rpdb-api-key-error" style="display: none; opacity: 0.7">
+                    Error: RPDB API key is not valid, please try again.
+                    <br/><br/><br/>
+                </div>
+                <span class="pure-form-message-inline" id="footer-buttons">
+                    <form action="/demo_lists" style="display: inline-block">
+                        &nbsp;<button type="submit" class="pure-button pure-button-primary-reverse">Demo Lists</button>
+                    </form>
+                    &nbsp;&nbsp;
+                    <form action="/what_is_mdblist" style="display: inline-block">
+                        <button type="submit" class="pure-button pure-button-primary-reverse">What is MDBList?</button>
                     </form>
                 </span>
             </div>
@@ -102,6 +110,18 @@
             let apiKey = false
             let rpdbApiKey = false
 
+            function isRpdbKeyValid(key, cb) {
+                if (!key) {
+                    cb(true)
+                    return
+                }
+                $.get(`https://api.ratingposterdb.com/${key}/isValid`, function (data) {
+                    cb(!!(data || {}).valid)
+                }).fail(function() {
+                    cb(false)
+                });
+            }
+
             function load_api_key() {
                 apiKey = $('#api-key').val()
                 rpdbApiKey = $('#rpdb-api-key').val()
@@ -109,35 +129,44 @@
                     $('#api-key-error-1').hide()
                 if ($('#api-key-error-2').is(':visible'))
                     $('#api-key-error-2').hide()
+                if ($('#rpdb-api-key-error').is(':visible'))
+                    $('#rpdb-api-key-error').hide()
                 if (!apiKey) {
                     $('#api-key-error-1').show()
                     return
                 }
-                $.get(`https://api.mdblist.com/lists/user/?apikey=${apiKey}`, function ( data ) {
-                    if ((data || {}).error || !Array.isArray(data)) {
-                        $('#api-key').val('')
-                        $('#api-key-error-2').show()
+                isRpdbKeyValid(rpdbApiKey, function (rpdbValid) {
+                    if (!rpdbValid) {
+                        $('#rpdb-api-key').val('')
+                        $('#rpdb-api-key-error').show()
                     } else {
-                        let colorId = 0
-                        data = data.map(list => {
-                            colorId = colorId === 1 ? 0 : 1
-                            const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
-                            let listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/manifest.json`
-                            if (rpdbApiKey) {
-                                listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
+                        $.get(`https://api.mdblist.com/lists/user/?apikey=${apiKey}`, function (data) {
+                            if ((data || {}).error || !Array.isArray(data)) {
+                                $('#api-key').val('')
+                                $('#api-key-error-2').show()
+                            } else {
+                                let colorId = 0
+                                data = data.map(list => {
+                                    colorId = colorId === 1 ? 0 : 1
+                                    const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
+                                    let listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/manifest.json`
+                                    if (rpdbApiKey) {
+                                        listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
+                                    }
+                                    return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${list.items} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                                })
+                                $('#addon-description').hide()
+                                $('#footer-buttons').hide()
+                                $('#api-key-form').hide()
+                                $('#opts-holder').append(data.join(''))
+                                $('#opts-holder').show()
                             }
-                            return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${list.items} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
-                        })
-                        $('#addon-description').hide()
-                        $('#about-button').hide()
-                        $('#api-key-form').hide()
-                        $('#opts-holder').append(data.join(''))
-                        $('#opts-holder').show()
+                        }).fail(function() {
+                            $('#api-key').val('')
+                            $('#api-key-error-2').show()
+                        });
                     }
-                }).fail(function() {
-                    $('#api-key').val('')
-                    $('#api-key-error-2').show()
-                });
+                })
 
             }
         </script>

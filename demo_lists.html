@@ -1,0 +1,156 @@
+<html>
+    <head>
+        <title>MDBList Stremio Addon</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="Stremio addon for MDBList">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.5/build/pure-min.css">
+        <style>
+            img {
+                border: none;
+                padding: none;
+            }
+            a {
+                text-decoration: none;
+                color: #008CBA;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            .pure-button-primary {
+                background-color: #008CBA;
+                border: none;
+                color: white;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border-radius: 0;
+            }
+            .pure-button-primary-reverse {
+                background-color: transparent;
+                border: 2px solid #008CBA;
+                color: #008CBA;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border-radius: 0;
+            }
+            .pure-button-primary-reverse:hover {
+                background-color: #008CBA;
+                border: 2px solid #008CBA;
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <center>
+            <br/><br/>
+            <img src="https://mdblist.com/static/mdblist.png" style="max-width: 100px">
+            <br/>
+            <h2>MDBList - Demo Lists</h2>
+            <br/>
+            <span id="addon-description">
+                A few demo lists from MDBList for Stremio users, these lists do not require a MDBList API Key.<span id="rpdb-note"><br/><br/><i>You can optionally use a RPDB key to add posters with ratings to the lists.</i></span>
+                <br/><br/>
+            </span>
+            <div>
+                <form class="pure-form pure-form-aligned" id="api-key-form" onsubmit="load_rpdb_key();return false">
+                    <fieldset>
+                        <div class="pure-control-group">
+                            <span style="font-size: 87%; opacity: 0.65">Get RPDB API Key from <a href="https://www.patreon.com/rpdb" target="_blank">this page</a></span>
+                            <div style="height: 10px"></div>
+                            <input type="text" id="rpdb-api-key" placeholder="RPDB API Key (optional)" style="width: 230px; max-width: 100%;" />
+                            <div style="height: 20px"></div>
+                            <span class="pure-form-message-inline">
+                                &nbsp;<button type="submit" class="pure-button pure-button-primary">Add RPDB Key</button>
+                            </span>
+                        </div>
+                    </fieldset>
+                </form>
+                <div id="rpdb-api-key-error" style="display: none; opacity: 0.7">
+                    Error: RPDB API key is not valid, please try again.
+                    <br/><br/><br/>
+                </div>
+                <div id="loaded-rpdb" style="display: none"><b>RPDB API Key loaded!</b><br/><br/></div>
+                <div id="opts-holder">
+                </div>
+                <br/><br/>
+                <span class="pure-form-message-inline" id="footer-buttons">
+                    <form action="/configure" style="display: inline-block">
+                        &nbsp;<button type="submit" class="pure-button pure-button-primary-reverse">Back to Addon Setup</button>
+                    </form>
+                </span>
+            </div>
+            <br/><br/>
+        </center>
+        <script>
+            const addonDomain = '1fe84bc728af-stremio-mdblist.baby-beamup.club'
+
+            let rpdbApiKey = false
+
+            let lists = []
+
+            let username = ''
+
+            $.get(`https://${addonDomain}/demos.json`, function (data) {
+                if ((data || {}).lists) {
+                    username = data.username
+                    lists = data.lists
+                    addLists()
+                }
+            })
+
+            function addLists() {
+                $('#opts-holder').empty()
+                let colorId = 0
+                const data = lists.map(list => {
+                    colorId = colorId === 1 ? 0 : 1
+                    const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
+                    let listLink = `stremio://${addonDomain}/${list.id}/user-${username}/manifest.json`
+                    if (rpdbApiKey) {
+                        listLink = `stremio://${addonDomain}/${list.id}/user-${username}/${rpdbApiKey}/manifest.json`
+                    }
+                    return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name}</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                })
+                $('#opts-holder').append(data.join(''))
+            }
+
+            addLists()
+
+            function isRpdbKeyValid(key, cb) {
+                if (!key) {
+                    cb(false)
+                    return
+                }
+                $.get(`https://api.ratingposterdb.com/${key}/isValid`, function (data) {
+                    cb(!!(data || {}).valid)
+                }).fail(function() {
+                    cb(false)
+                });
+            }
+
+            function load_rpdb_key() {
+                isRpdbKeyValid($('#rpdb-api-key').val(), function (rpdbValid) {
+                    if (!rpdbValid) {
+                        $('#rpdb-api-key').val('')
+                        $('#rpdb-api-key-error').show()
+                    } else {
+                        if ($('#rpdb-api-key-error').is(':visible'))
+                            $('#rpdb-api-key-error').hide()
+                        rpdbApiKey = $('#rpdb-api-key').val()
+                        $('#api-key-form').hide()
+                        $('#rpdb-note').hide()
+                        $('#loaded-rpdb').show()
+                        addLists()
+                    }
+                })
+            }
+        </script>
+    </body>
+</html>
