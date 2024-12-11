@@ -80,7 +80,42 @@ app.get('/demos.json', (req, res) => {
 })
 
 app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
-	if (req.params.mdbListKey === `user-${demos.username}`) {
+	if (req.params.mdbListKey.startsWith(`userapi-`)) {
+		const listId = req.params.listIds
+		const user = req.params.mdbListKey.replace('userapi-', '').split('-')[0]
+		const mdbListKey = req.params.mdbListKey.replace('userapi-', '').split('-')[1]
+
+		needle.get(`https://api.mdblist.com/lists/${user}/${listId}?apikey=${mdbListKey}`, { follow_max: 3 }, (err, resp, body) => {
+				if (!err && resp.statusCode === 200 && body && Array.isArray(body) && body.length) {
+					const listName = body[0].name
+					const types = []
+					body.forEach(el => {
+						if ((el || {}).items)
+							types.push(el.mediatype === 'show' ? 'series' : 'movie')
+					})
+					if (types.length) {
+						const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
+						manifestClone.name = listName
+						manifestClone.id = `com.mdblist.${user}-${listId}`
+						manifestClone.types = types
+						const catalogs = []
+						types.forEach(type => {
+							const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
+							catalogClone.name = listName
+							catalogClone.id = listId+'-'+type
+							catalogClone.type = type
+							catalogs.push(catalogClone)
+						})
+						manifestClone.catalogs = catalogs
+						res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
+						res.json(manifestClone)
+
+						return;
+					}
+				}
+				res.status(500).send('Error from mDBList API')
+		})
+	} else if (req.params.mdbListKey === `user-${demos.username}`) {
 		const listId = req.params.listIds
 		const list = demos.lists.find(el => el.id === listId)
 		if (!list) {
@@ -164,7 +199,71 @@ function getCinemetaForIds(type, ids, cb) {
 const perPage = 100
 
 app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
-	if (req.params.mdbListKey === `user-${demos.username}`) {
+	if (req.params.mdbListKey.startsWith(`userapi-`)) {
+		const listId = req.params.listIds
+		if (!listId) {
+			res.status(500).send('Invalid mDBList list slug')
+			return
+		}
+		const user = req.params.mdbListKey.replace('userapi-', '').split('-')[0]
+		if (!user) {
+			res.status(500).send('Invalid mDBList list user')
+			return
+		}
+		const mdbListKey = req.params.mdbListKey.replace('userapi-', '').split('-')[1]
+		if (!mdbListKey) {
+			res.status(500).send('Invalid mDBList Key')
+			return
+		}
+		const userKey = req.params.userKey
+		if (userKey && !isUserKeySane(userKey)) {
+			res.status(500).send('Invalid RPDB Key')
+			return
+		}
+		const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
+		const skip = parseInt(extra.skip || 0)
+		const genre = extra.genre
+		const type = req.params.type
+		const mdbListType = type === 'movie' ? 'movie' : 'show'
+
+		let url = `https://api.mdblist.com/lists/${user}/${listId}/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
+		if (genre)
+			url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+
+		needle.get(url, { follow_max: 3 }, (err, resp, mdbBody) => {
+			if (!err && resp.statusCode === 200) {
+				const mdbType = type === 'movie' ? 'movies' : 'shows'
+				if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
+					body = mdbBody[mdbType]
+					res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+					const items = body.map(mdbToStremio.bind(null, userKey))
+					getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
+						if (metasDetailed.length) {
+							res.json({
+								metas: metasDetailed.map((el, ij) => {
+									el = el || items[ij]
+									if (el.id && el.id.startsWith('tt') && userKey)
+										el.poster = `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${el.id}.jpg?fallback=true`
+									return el
+								})
+							})
+						} else {
+							res.json({
+								metas: items
+							})
+						}
+					})
+				} else {
+					res.json({
+						metas: []
+					})
+				}
+			} else {
+				res.status(500).send('Error from mDBList API')
+			}
+		})
+
+	} else if (req.params.mdbListKey === `user-${demos.username}`) {
 		const listId = req.params.listIds
 		const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
 		const skip = parseInt(extra.skip || 0)
