@@ -16,7 +16,7 @@ function isUserKeySane(key) {
 const manifestTemplate = {
    "id": "com.mdblist.lists",
    "logo": "https://mdblist.com/static/mdblist.png",
-   "version": "0.1.0",
+   "version": "0.2.0",
    "description": "Addon for MDBList custom lists, optionally supports rating posters from RPDB.",
    "name": "MDBList",
    "resources": [
@@ -89,10 +89,19 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 				if (!err && resp.statusCode === 200 && body && Array.isArray(body) && body.length) {
 					const listName = body[0].name
 					const types = []
-					body.forEach(el => {
-						if ((el || {}).items)
-							types.push(el.mediatype === 'show' ? 'series' : 'movie')
-					})
+					if (body[0].mediatype) {
+						body.forEach(el => {
+							if ((el || {}).items)
+								types.push(el.mediatype === 'show' ? 'series' : 'movie')
+						})
+					} else {
+						if (body[0].movies)
+							types.push('movie')
+						if (body[0].shows)
+							types.push('series')
+						if (!types.length)
+							types.push('movie')
+					}
 					if (types.length) {
 						const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
 						manifestClone.name = listName
@@ -154,16 +163,35 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 		if (listIds.length === 1) {
 			needle.get(`https://api.mdblist.com/lists/${listIds[0]}/?apikey=${mdbListKey}`, { follow_max: 3 }, (err, resp, body) => {
 				if (!err && resp.statusCode === 200 && ((body || [])[0] || {}).name) {
-					const type = body[0].mediatype === 'show' ? 'series' : 'movie'
+					const types = []
+					if (body[0].mediatype) {
+						body.forEach(el => {
+							if ((el || {}).items)
+								types.push(el.mediatype === 'show' ? 'series' : 'movie')
+						})
+					} else {
+						if (body[0].movies)
+							types.push('movie')
+						if (body[0].shows)
+							types.push('series')
+						if (!types.length)
+							types.push('movie')
+					}
 					const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
-					manifestClone.name = body[0].name
-					manifestClone.id = `com.mdblist.${body[0].slug}`
-					manifestClone.types = [type]
-					const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
-					catalogClone.name = body[0].name
-					catalogClone.id = body[0].slug
-					catalogClone.type = type
-					manifestClone.catalogs = [catalogClone]
+					const listName = body[0].name
+					const slug = body[0].slug
+					manifestClone.name = listName
+					manifestClone.id = `com.mdblist.${slug}`
+					manifestClone.types = types
+					const catalogs = []
+					types.forEach(type => {
+						const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
+						catalogClone.name = listName
+						catalogClone.id = slug+'-'+type
+						catalogClone.type = type
+						catalogs.push(catalogClone)
+					})
+					manifestClone.catalogs = catalogs
 					res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
 					res.json(manifestClone)
 				} else {
