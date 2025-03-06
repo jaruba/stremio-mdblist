@@ -116,7 +116,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 							catalogs.push(catalogClone)
 						})
 						manifestClone.catalogs = catalogs
-						res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
+						res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 						res.json(manifestClone)
 
 						return;
@@ -147,7 +147,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 		]
 		catalogClone.extraSupported = ["skip"]
 		manifestClone.catalogs = [catalogClone]
-		res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
+		res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 		res.json(manifestClone)
 	} else {
 		const listIds = (req.params.listIds || '').split(',')
@@ -192,7 +192,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 						catalogs.push(catalogClone)
 					})
 					manifestClone.catalogs = catalogs
-					res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
+					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 					res.json(manifestClone)
 				} else {
 					res.status(500).send('Error from mDBList API')
@@ -263,7 +263,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 				const mdbType = type === 'movie' ? 'movies' : 'shows'
 				if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
 					body = mdbBody[mdbType]
-					res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 					const items = body.map(mdbToStremio.bind(null, userKey))
 					getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
 						if (metasDetailed.length) {
@@ -304,7 +304,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 		}
 		needle.get(url, { follow_max: 3 }, (err, resp, body) => {
 			if (!err && resp.statusCode === 200 && body[0].title) {
-				res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+				res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 				const items = body.map(mdbToStremio.bind(null, userKey))
 				getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
 					if (metasDetailed.length) {
@@ -355,7 +355,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 					const mdbType = type === 'movie' ? 'movies' : 'shows'
 					if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
 						body = mdbBody[mdbType]
-						res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+						res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 						const items = body.map(mdbToStremio.bind(null, userKey))
 						getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
 							if (metasDetailed.length) {
