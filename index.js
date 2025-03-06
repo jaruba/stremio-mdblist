@@ -263,7 +263,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 				const mdbType = type === 'movie' ? 'movies' : 'shows'
 				if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
 					body = mdbBody[mdbType]
-					res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 					const items = body.map(mdbToStremio.bind(null, userKey))
 					getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
 						if (metasDetailed.length) {
@@ -304,7 +304,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 		}
 		needle.get(url, { follow_max: 3 }, (err, resp, body) => {
 			if (!err && resp.statusCode === 200 && body[0].title) {
-				res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+				res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 				const items = body.map(mdbToStremio.bind(null, userKey))
 				getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
 					if (metasDetailed.length) {
@@ -355,7 +355,7 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 					const mdbType = type === 'movie' ? 'movies' : 'shows'
 					if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
 						body = mdbBody[mdbType]
-						res.setHeader('Cache-Control', `public, max-age=${6 * 60 * 60}`)
+						res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
 						const items = body.map(mdbToStremio.bind(null, userKey))
 						getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
 							if (metasDetailed.length) {
