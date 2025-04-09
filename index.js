@@ -204,6 +204,57 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 	}
 })
 
+// New route for external manifest
+app.get('/external/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
+	const listId = req.params.listIds;
+	const mdbListKey = req.params.mdbListKey;
+
+	if (!listId || !mdbListKey) {
+		res.status(500).send('Invalid list ID or mDBList Key');
+		return;
+	}
+
+	needle.get(`https://api.mdblist.com/external/lists/${listId}?apikey=${mdbListKey}`, { follow_max: 3 }, (err, resp, body) => {
+		if (!err && resp.statusCode === 200 && body && Array.isArray(body) && body.length) {
+			const listName = body[0].name || 'External List';
+			const types = [];
+			if (body[0].mediatype) {
+				body.forEach(el => {
+					if ((el || {}).items) {
+						types.push(el.mediatype === 'show' ? 'series' : 'movie');
+					}
+				});
+			} else {
+				if (body[0].movies) types.push('movie');
+				if (body[0].shows) types.push('series');
+				if (!types.length) types.push('movie');
+			}
+
+			if (types.length) {
+				const manifestClone = JSON.parse(JSON.stringify(manifestTemplate));
+				manifestClone.name = listName;
+				manifestClone.id = `com.mdblist.external-${listId}`;
+				manifestClone.types = types;
+				const catalogs = [];
+				types.forEach(type => {
+					const catalogClone = JSON.parse(JSON.stringify(catalogTemplate));
+					catalogClone.name = listName;
+					catalogClone.id = `external-${listId}-${type}`;
+					catalogClone.type = type;
+					catalogs.push(catalogClone);
+				});
+				manifestClone.catalogs = catalogs;
+				res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`);
+				res.json(manifestClone);
+			} else {
+				res.status(500).send('No valid types found in external list');
+			}
+		} else {
+			res.status(500).send('Error from mDBList External API');
+		}
+	});
+});
+
 function mdbToStremio(userKey, obj) {
 	return {
 		id: obj.imdb_id,
@@ -387,6 +438,63 @@ app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req
 		}
 	}
 })
+
+// New route for external catalog
+app.get('/external/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	const listId = req.params.listIds;
+	const mdbListKey = req.params.mdbListKey;
+	const userKey = req.params.userKey;
+	const type = req.params.type;
+
+	if (!listId || !mdbListKey) {
+		res.status(500).send('Invalid list ID or mDBList Key');
+		return;
+	}
+
+	if (userKey && !isUserKeySane(userKey)) {
+		res.status(500).send('Invalid RPDB Key');
+		return;
+	}
+
+	const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {};
+	const skip = parseInt(extra.skip || 0);
+	const genre = extra.genre;
+
+	let url = `https://api.mdblist.com/external/lists/${listId}/items?apikey=${mdbListKey}&limit=${perPage}&offset=${skip}`;
+	if (genre) {
+		url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`;
+	}
+
+	needle.get(url, { follow_max: 3 }, (err, resp, mdbBody) => {
+		if (!err && resp.statusCode === 200) {
+			const mdbType = type === 'movie' ? 'movies' : 'shows';
+			const body = ((mdbBody || {})[mdbType] || []).length ? mdbBody[mdbType] : mdbBody; // Fallback to raw body if no movies/shows key
+			if (Array.isArray(body) && body.length && body[0].title) {
+				res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`);
+				const items = body.map(mdbToStremio.bind(null, userKey));
+				getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
+					if (metasDetailed.length) {
+						res.json({
+							metas: metasDetailed.map((el, ij) => {
+								el = el || items[ij];
+								if (el.id && el.id.startsWith('tt') && userKey) {
+									el.poster = `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${el.id}.jpg?fallback=true`;
+								}
+								return el;
+							})
+						});
+					} else {
+						res.json({ metas: items });
+					}
+				});
+			} else {
+				res.json({ metas: [] });
+			}
+		} else {
+			res.status(500).send('Error from mDBList External API');
+		}
+	});
+});
 
 const port = process.env.PORT || 64321
 
