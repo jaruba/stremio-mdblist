@@ -101,6 +101,11 @@
             </div>
             <div id="opts-holder" style="display: none">
             </div>
+            <div id="ext-opts-title" style="display: none">
+                <h2>External Lists</h2>
+            </div>
+            <div id="ext-opts-holder" style="display: none">
+            </div>
             <br/><br/>
         </center>
         <script>
@@ -153,13 +158,32 @@
                                     if (rpdbApiKey) {
                                         listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
                                     }
-                                    return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${list.items} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                                    return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
                                 })
                                 $('#addon-description').hide()
                                 $('#footer-buttons').hide()
                                 $('#api-key-form').hide()
                                 $('#opts-holder').append(data.join(''))
                                 $('#opts-holder').show()
+                                $.get(`https://api.mdblist.com/external/lists/user?apikey=${apiKey}`, function (data) {
+                                    if (data && Array.isArray(data) && data.length) {
+                                        let colorId = 0
+                                        data = data.map(list => {
+                                            colorId = colorId === 1 ? 0 : 1
+                                            const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
+                                            let listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/manifest.json`
+                                            if (rpdbApiKey) {
+                                                listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
+                                            }
+                                            return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                                        })
+                                        $('#ext-opts-holder').append(data.join(''))
+                                        $('#ext-opts-holder').show()
+                                        $('#ext-opts-title').show()
+                                    }
+                                }).fail(function() {
+
+                                });
                             }
                         }).fail(function() {
                             $('#api-key').val('')
