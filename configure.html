@@ -99,6 +99,13 @@
                     </form>
                 </span>
             </div>
+            <div id="settings-holder" style="display: none">
+                <center>
+                    <input type="checkbox" id="notunified" name="notunified" checked />
+                    <label for="notunified">Separate Catalogs for Movies and Series</label>
+                </center>
+                <br/><br/>
+            </div>
             <div id="opts-holder" style="display: none">
             </div>
             <div id="ext-opts-title" style="display: none">
@@ -150,6 +157,7 @@
                                 $('#api-key').val('')
                                 $('#api-key-error-2').show()
                             } else {
+                                $('#settings-holder').show()
                                 let colorId = 0
                                 data = data.map(list => {
                                     colorId = colorId === 1 ? 0 : 1
@@ -158,11 +166,18 @@
                                     if (rpdbApiKey) {
                                         listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
                                     }
+                                    if (!$('#notunified').is(':checked')) {
+                                        listLink = `stremio://${addonDomain}/unified/${list.id}/${apiKey}/mdblist/manifest.json`
+                                        if (rpdbApiKey) {
+                                            listLink = `stremio://${addonDomain}/unified/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
+                                        }
+                                    }
                                     return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
                                 })
                                 $('#addon-description').hide()
                                 $('#footer-buttons').hide()
                                 $('#api-key-form').hide()
+                                $('#opts-holder').empty()
                                 $('#opts-holder').append(data.join(''))
                                 $('#opts-holder').show()
                                 $.get(`https://api.mdblist.com/external/lists/user?apikey=${apiKey}`, function (data) {
@@ -175,8 +190,15 @@
                                             if (rpdbApiKey) {
                                                 listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
                                             }
+                                            if (!$('#notunified').is(':checked')) {
+                                                listLink = `stremio://${addonDomain}/unified-external/${list.id}/${apiKey}/mdblist/manifest.json`
+                                                if (rpdbApiKey) {
+                                                    listLink = `stremio://${addonDomain}/unified-external/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
+                                                }
+                                            }
                                             return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
                                         })
+                                        $('#ext-opts-holder').empty()
                                         $('#ext-opts-holder').append(data.join(''))
                                         $('#ext-opts-holder').show()
                                         $('#ext-opts-title').show()
@@ -193,6 +215,13 @@
                 })
 
             }
+            $(document).ready(function() {
+                $('#notunified').change(function() {
+                    setTimeout(function() {
+                        load_api_key();
+                    }, 0);
+                });
+            });
         </script>
     </body>
 </html>
