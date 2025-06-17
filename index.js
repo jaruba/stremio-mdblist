@@ -121,7 +121,7 @@ function getExternalManifest(req, res, isUnified) {
 				types.forEach(type => {
 					const catalogClone = JSON.parse(JSON.stringify(catalogTemplate));
 					catalogClone.name = listName;
-					catalogClone.id = `external-${isUnified ? 'unified-' : ''}${listId}-${type}`;
+					catalogClone.id = `external-${listId}-${type}`;
 					catalogClone.type = type;
 					catalogs.push(catalogClone);
 				});
@@ -186,7 +186,7 @@ function getManifest(req, res, isUnified) {
 						types.forEach(type => {
 							const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 							catalogClone.name = listName
-							catalogClone.id = (isUnified ? 'unified-' : '') + listId+'-'+type
+							catalogClone.id = listId+'-'+type
 							catalogClone.type = type
 							catalogs.push(catalogClone)
 						})
@@ -212,7 +212,7 @@ function getManifest(req, res, isUnified) {
 		manifestClone.types = [catalogType || list.type]
 		const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 		catalogClone.name = list.name
-		catalogClone.id = (isUnified ? 'unified2-' : '') + list.id
+		catalogClone.id = list.id
 		catalogClone.type = catalogType || list.type
 		delete catalogClone.genres
 		catalogClone.extra = [
@@ -266,7 +266,7 @@ function getManifest(req, res, isUnified) {
 					types.forEach(type => {
 						const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 						catalogClone.name = listName
-						catalogClone.id = (isUnified ? 'unified3-' : '') + slug+'-'+type
+						catalogClone.id = slug+'-'+type
 						catalogClone.type = type
 						catalogs.push(catalogClone)
 					})
