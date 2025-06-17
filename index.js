@@ -470,16 +470,10 @@ function getList(req, res, isUnified) {
 		const type = req.params.type
 		const mdbListType = type === 'movie' ? 'movie' : 'show'
 
-		let url = false
-
-		if (!isUnified) {
-			url = `https://api.mdblist.com/lists/${user}/${listId}/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
-			if (genre)
-				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
-		} else {
-			url = `https://api.mdblist.com/lists/${user}/${listId}/items?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
-			if (genre)
-				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+		let url = `https://api.mdblist.com/lists/${user}/${listId}/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
+		if (genre)
+			url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+		if (isUnified) {
 			url += `&unified=true`
 		}
 
