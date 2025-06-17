@@ -115,7 +115,7 @@ function getExternalManifest(req, res, isUnified) {
 			if (types.length) {
 				const manifestClone = JSON.parse(JSON.stringify(manifestTemplate));
 				manifestClone.name = listName;
-				manifestClone.id = `com.mdblist.external-${isUnified ? 'unified-' : ''}${listId}`;
+				manifestClone.id = `com.mdblist.external-${listId}`;
 				manifestClone.types = types;
 				const catalogs = [];
 				types.forEach(type => {
@@ -180,7 +180,7 @@ function getManifest(req, res, isUnified) {
 					if (types.length) {
 						const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
 						manifestClone.name = listName
-						manifestClone.id = `com.mdblist.${user}${isUnified ? 'unified-' : ''}-${listId}`
+						manifestClone.id = `com.mdblist.${user}-${listId}`
 						manifestClone.types = types
 						const catalogs = []
 						types.forEach(type => {
@@ -208,7 +208,7 @@ function getManifest(req, res, isUnified) {
 		}
 		const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
 		manifestClone.name = list.name
-		manifestClone.id = `com.mdblist.${isUnified ? 'unified-' : ''}${list.id}`
+		manifestClone.id = `com.mdblist.${list.id}`
 		manifestClone.types = [catalogType || list.type]
 		const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 		catalogClone.name = list.name
@@ -260,7 +260,7 @@ function getManifest(req, res, isUnified) {
 					const listName = body[0].name
 					const slug = body[0].slug
 					manifestClone.name = listName
-					manifestClone.id = `com.mdblist.${isUnified ? 'unified-' : ''}${slug}`
+					manifestClone.id = `com.mdblist.${slug}`
 					manifestClone.types = types
 					const catalogs = []
 					types.forEach(type => {
