@@ -307,7 +307,7 @@ function mdbToStremio(userKey, obj) {
 function getCinemetaForIds(type, ids, cb) {
 	const imdbIds = ids.join(',')
 	needle.get(`https://v3-cinemeta.strem.io/catalog/${type}/last-videos/lastVideosIds=${imdbIds}.json`, (err, resp, body) => {
-		cb((body || {}).metasDetailed || [])
+		cb(((body || {}).metasDetailed || []).filter(el => !!el))
 	})
 }
 
@@ -316,8 +316,8 @@ const perPage = 100
 function unifiedList(req, res, mdbBody, userKey) {
 	if (Array.isArray(mdbBody) && mdbBody.length && mdbBody[0].title) {
 		let firstType = 'movie'
-		let items1 = mdbBody.filter(el => el.mediatype === 'movie').filter(el => !!el.imdb_id)
-		let items2 = mdbBody.filter(el => el.mediatype === 'show').filter(el => !!el.imdb_id)
+		let items1 = mdbBody.filter(el => el.mediatype === 'movie').filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr')))
+		let items2 = mdbBody.filter(el => el.mediatype === 'show').filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr')))
 		if (!items1.length && !items2.length) {
 			res.json({ metas: [] });
 			return
@@ -331,7 +331,7 @@ function unifiedList(req, res, mdbBody, userKey) {
 		items2 = items2.map(mdbToStremio.bind(null, userKey));
 		function orderList(metasDetailed) {
 			const newList = []
-			mdbBody.filter(el => !!el.imdb_id).map(mdbToStremio.bind(null, userKey)).forEach(el => {
+			mdbBody.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey)).forEach(el => {
 				const item = metasDetailed.find(elm => elm.id === el.id)
 				if (item) {
 					newList.push(item)
@@ -422,7 +422,7 @@ function getExternalList(req, res, isUnified) {
 				const body = ((mdbBody || {})[mdbType] || []).length ? mdbBody[mdbType] : mdbBody; // Fallback to raw body if no movies/shows key
 				if (Array.isArray(body) && body.length && body[0].title) {
 					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`);
-					const items = body.filter(el => !!el.imdb_id).map(mdbToStremio.bind(null, userKey));
+					const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey));
 					if (!items.length) {
 						res.json({ metas: [] });
 						return;
@@ -511,7 +511,7 @@ function getList(req, res, isUnified) {
 				if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
 					body = mdbBody[mdbType]
 					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
-					const items = body.filter(el => !!el.imdb_id).map(mdbToStremio.bind(null, userKey))
+					const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
 					if (!items.length) {
 						res.json({ metas: [] });
 						return;
@@ -563,7 +563,7 @@ function getList(req, res, isUnified) {
 					return;
 				}
 				res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
-				const items = body.filter(el => !!el.imdb_id).map(mdbToStremio.bind(null, userKey))
+				const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
 				if (!items.length) {
 					res.json({ metas: [] });
 					return;
@@ -625,7 +625,7 @@ function getList(req, res, isUnified) {
 					if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
 						body = mdbBody[mdbType]
 						res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
-						const items = body.filter(el => !!el.imdb_id).map(mdbToStremio.bind(null, userKey))
+						const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
 						if (!items.length) {
 							res.json({ metas: [] });
 							return;
