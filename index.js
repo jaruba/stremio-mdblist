@@ -146,12 +146,31 @@ app.get('/unified-external/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.
 	getExternalManifest(req, res, true)
 });
 
-function getManifest(req, res, isUnified) {
+function getManifest(req, res, isUnified, isWatchlist) {
 	let catalogType = false
 	if (isUnified) {
 		catalogType = req.params.catalogType || 'mdblist'
 	}
-	if (req.params.mdbListKey.startsWith(`userapi-`)) {
+	if (isWatchlist) {
+		const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
+		manifestClone.name = 'MDBList'
+		manifestClone.id = `com.mdblist.${isUnified ? 'unified-' : ''}watchlist`
+		if (catalogType) {
+			manifestClone.types = [catalogType]
+		} else {
+			manifestClone.types = ['movie', 'series']
+		}
+		manifestClone.catalogs = []
+		manifestClone.types.forEach(catType => {
+			const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
+			catalogClone.name = 'Watchlist'
+			catalogClone.id = (isUnified ? 'unified2-' : '') + 'mdbwatchlist'
+			catalogClone.type = catType
+			manifestClone.catalogs.push(catalogClone)
+		})
+		res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
+		res.json(manifestClone)
+	} else if (req.params.mdbListKey.startsWith(`userapi-`)) {
 		const listId = req.params.listIds
 		const user = req.params.mdbListKey.replace('userapi-', '').split('-')[0]
 		const mdbListKey = req.params.mdbListKey.replace('userapi-', '').split('-')[1]
@@ -283,12 +302,20 @@ function getManifest(req, res, isUnified) {
 	}
 }
 
-app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
-	getManifest(req, res, false)
+app.get('/unified/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
+	getManifest(req, res, true, false)
 })
 
-app.get('/unified/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
-	getManifest(req, res, true)
+app.get('/unified-watchlist/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
+	getManifest(req, res, true, true)
+})
+
+app.get('/watchlist/:mdbListKey/:userKey?/manifest.json', (req, res) => {
+	getManifest(req, res, false, true)
+})
+
+app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
+	getManifest(req, res, false, false)
 })
 
 function mdbToStremio(userKey, obj) {
@@ -460,8 +487,79 @@ app.get('/external/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.js
 	getExternalList(req, res, false)
 });
 
-function getList(req, res, isUnified) {
-	if (req.params.mdbListKey.startsWith(`userapi-`)) {
+function getList(req, res, isUnified, isWatchlist) {
+	if (isWatchlist) {
+		const mdbListKey = req.params.mdbListKey
+		if (!mdbListKey) {
+			res.status(500).send('Invalid mDBList Key')
+			return
+		}
+		const userKey = req.params.userKey
+		if (userKey && !isUserKeySane(userKey)) {
+			res.status(500).send('Invalid RPDB Key')
+			return
+		}
+		const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
+		const skip = parseInt(extra.skip || 0)
+		const genre = extra.genre
+		const type = req.params.type
+		const mdbListType = type === 'movie' ? 'movie' : 'show'
+
+		let url = false
+
+		if (!isUnified) {
+			url = `hhttps://api.mdblist.com/watchlist/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
+			if (genre)
+				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+		} else {
+			url = `https://api.mdblist.com/watchlist/items?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
+			if (genre)
+				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+			url += `&unified=true`
+		}
+
+		needle.get(url, { follow_max: 3 }, (err, resp, mdbBody) => {
+			if (!err && resp.statusCode === 200) {
+				if (isUnified) {
+					unifiedList(req, res, mdbBody, userKey)
+					return;
+				}
+				const mdbType = type === 'movie' ? 'movies' : 'shows'
+				if (((mdbBody || {})[mdbType] || []).length && mdbBody[mdbType][0].title) {
+					body = mdbBody[mdbType]
+					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
+					const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
+					if (!items.length) {
+						res.json({ metas: [] });
+						return;
+					}
+					getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
+						if (metasDetailed.length) {
+							res.json({
+								metas: metasDetailed.map((el, ij) => {
+									el = el || items[ij]
+									if (el.id && el.id.startsWith('tt') && userKey)
+										el.poster = `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${el.id}.jpg?fallback=true`
+									return el
+								})
+							})
+						} else {
+							res.json({
+								metas: items
+							})
+						}
+					})
+				} else {
+					res.json({
+						metas: []
+					})
+				}
+			} else {
+				res.status(500).send('Error from mDBList API')
+			}
+		})
+
+	} else if (req.params.mdbListKey.startsWith(`userapi-`)) {
 		const listId = req.params.listIds
 		if (!listId) {
 			res.status(500).send('Invalid mDBList list slug')
@@ -661,12 +759,20 @@ function getList(req, res, isUnified) {
 	}
 }
 
+app.get('/unified-watchlist/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getList(req, res, true, true)
+})
+
+app.get('/watchlist/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getList(req, res, false, true)
+})
+
 app.get('/unified/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
-	getList(req, res, true)
+	getList(req, res, true, false)
 })
 
 app.get('/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
-	getList(req, res, false)
+	getList(req, res, false, false)
 })
 
 const port = process.env.PORT || 64321
