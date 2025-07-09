@@ -508,7 +508,7 @@ function getList(req, res, isUnified, isWatchlist) {
 		let url = false
 
 		if (!isUnified) {
-			url = `hhttps://api.mdblist.com/watchlist/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
+			url = `https://api.mdblist.com/watchlist/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
 			if (genre)
 				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
 		} else {
