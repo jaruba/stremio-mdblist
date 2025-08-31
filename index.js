@@ -542,6 +542,7 @@ function getExternalList(req, res, isUnified) {
 	});
 }
 
+
 app.get('/unified-external/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
 	getExternalList(req, res, true)
 });
