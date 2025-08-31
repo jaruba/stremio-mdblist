@@ -89,6 +89,12 @@
                     Error: RPDB API key is not valid, please try again.
                     <br/><br/><br/>
                 </div>
+                <div id="list-empty-error" style="display: none; opacity: 0.7">
+                    <span style="width: 588px; max-width: 90%; display: inline-block">
+                        <b>Your MDBList personal lists are empty, if you recently created your account it can take a bit of time, please try again later.</b>
+                    </span>
+                    <br/><br/><br/>
+                </div>
                 <span class="pure-form-message-inline" id="footer-buttons">
                     <form action="/demo_lists" style="display: inline-block">
                         &nbsp;<button type="submit" class="pure-button pure-button-primary-reverse">Demo Lists</button>
@@ -104,7 +110,7 @@
                     <input type="checkbox" id="notunified" name="notunified" checked />
                     <label for="notunified">Separate Catalogs for Movies and Series</label>
                 </center>
-                <br/><br/>
+                <br/>
                 <center>
                     <input type="checkbox" id="withsearch" name="withsearch" />
                     <label for="withsearch">Include Search for Each Catalog</label>
@@ -148,6 +154,8 @@
                     $('#api-key-error-2').hide()
                 if ($('#rpdb-api-key-error').is(':visible'))
                     $('#rpdb-api-key-error').hide()
+                if ($('#list-empty-error').is(':visible'))
+                    $('#list-empty-error').hide()
                 if (!apiKey) {
                     $('#api-key-error-1').show()
                     return
@@ -157,11 +165,34 @@
                         $('#rpdb-api-key').val('')
                         $('#rpdb-api-key-error').show()
                     } else {
-                        $.get(`https://api.mdblist.com/lists/user/?apikey=${apiKey}`, function (data) {
-                            if ((data || {}).error || !Array.isArray(data)) {
+                        let data = []
+                        let extData = []
+                        let personalDone = false
+                        let externalDone = false
+                        function savePersonalLists(dt) {
+                            if ((dt || {}).error || !Array.isArray(dt)) {
                                 $('#api-key').val('')
                                 $('#api-key-error-2').show()
                             } else {
+                                data = dt
+                                personalDone = true
+                                processLists()
+                            }
+                        }
+                        function saveExternalLists(dt) {
+                            if (dt && Array.isArray(dt) && dt.length) {
+                                extData = dt
+                            }
+                            externalDone = true
+                            processLists()
+                        }
+                        function processLists() {
+                            if (personalDone && externalDone) {
+                                if (!data.length && !extData.length) {
+                                    $('#list-empty-error').show()
+                                    return;
+                                }
+                                // personal lists start
                                 $('#settings-holder').show()
                                 let colorId = 0
                                 data = data.map(list => {
@@ -192,44 +223,52 @@
                                 $('#opts-holder').empty()
                                 $('#opts-holder').append(data.join(''))
                                 $('#opts-holder').show()
-                                $.get(`https://api.mdblist.com/external/lists/user?apikey=${apiKey}`, function (data) {
-                                    if (data && Array.isArray(data) && data.length) {
-                                        let colorId = 0
-                                        data = data.map(list => {
-                                            colorId = colorId === 1 ? 0 : 1
-                                            const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
-                                            let listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/manifest.json`
-                                            if (rpdbApiKey) {
-                                                listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
-                                            }
-                                            const notunified = !!$('#notunified').is(':checked')
-                                            const withsearch = !!$('#withsearch').is(':checked')
-                                            const extraOpts = []
-                                            if (!notunified)
-                                                extraOpts.push('unified')
-                                            if (withsearch)
-                                                extraOpts.push('withsearch')
-                                            extraOpts.push('external')
-                                            if (extraOpts.length) {
-                                                listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/manifest.json`
-                                                if (rpdbApiKey) {
-                                                    listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
-                                                }
-                                            }
-                                            return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
-                                        })
-                                        $('#ext-opts-holder').empty()
-                                        $('#ext-opts-holder').append(data.join(''))
-                                        $('#ext-opts-holder').show()
-                                        $('#ext-opts-title').show()
-                                    }
-                                }).fail(function() {
+                                // personal lists end
 
-                                });
+                                // external lists start
+                                if (extData.length) {
+                                    let colorId = 0
+                                    extData = extData.map(list => {
+                                        colorId = colorId === 1 ? 0 : 1
+                                        const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
+                                        let listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/manifest.json`
+                                        if (rpdbApiKey) {
+                                            listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
+                                        }
+                                        const notunified = !!$('#notunified').is(':checked')
+                                        const withsearch = !!$('#withsearch').is(':checked')
+                                        const extraOpts = []
+                                        if (!notunified)
+                                            extraOpts.push('unified')
+                                        if (withsearch)
+                                            extraOpts.push('withsearch')
+                                        extraOpts.push('external')
+                                        if (extraOpts.length) {
+                                            listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/manifest.json`
+                                            if (rpdbApiKey) {
+                                                listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
+                                            }
+                                        }
+                                        return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                                    })
+                                    $('#ext-opts-holder').empty()
+                                    $('#ext-opts-holder').append(extData.join(''))
+                                    $('#ext-opts-holder').show()
+                                    $('#ext-opts-title').show()
+                                }
+                                // external lists end
                             }
-                        }).fail(function() {
+                        }
+                        $.get(`https://api.mdblist.com/lists/user/?apikey=${apiKey}&break=${Date.now()}`,
+                            savePersonalLists
+                        ).fail(function() {
                             $('#api-key').val('')
                             $('#api-key-error-2').show()
+                        });
+                        $.get(`https://api.mdblist.com/external/lists/user?apikey=${apiKey}&break=${Date.now()}`,
+                            saveExternalLists
+                        ).fail(function() {
+
                         });
                     }
                 })
