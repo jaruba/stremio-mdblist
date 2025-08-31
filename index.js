@@ -16,7 +16,7 @@ function isUserKeySane(key) {
 const manifestTemplate = {
    "id": "com.mdblist.lists",
    "logo": "https://mdblist.com/static/mdblist.png",
-   "version": "0.2.0",
+   "version": "0.2.1",
    "description": "Addon for MDBList custom lists, optionally supports rating posters from RPDB.",
    "name": "MDBList",
    "resources": [
@@ -79,12 +79,16 @@ app.get('/demos.json', (req, res) => {
 	res.json(demos)
 })
 
-function getExternalManifest(req, res, isUnified) {
+function getExternalManifest(req, res, isUnified, hasSearch) {
 	let catalogType = false
 	if (isUnified) {
 		catalogType = req.params.catalogType || 'mdblist'
 	}
-
+	const extraOpts = []
+	if (isUnified)
+		extraOpts.push('unified')
+	if (hasSearch)
+		extraOpts.push('withsearch')
 	const listId = req.params.listIds;
 	const mdbListKey = req.params.mdbListKey;
 
@@ -114,15 +118,22 @@ function getExternalManifest(req, res, isUnified) {
 
 			if (types.length) {
 				const manifestClone = JSON.parse(JSON.stringify(manifestTemplate));
+				extraOpts.push(listId)
 				manifestClone.name = listName;
-				manifestClone.id = `com.mdblist.external-${isUnified ? 'unified-' : ''}${listId}`;
+				manifestClone.id = `com.mdblist.external-${extraOpts.join('-')}`;
 				manifestClone.types = types;
 				const catalogs = [];
 				types.forEach(type => {
 					const catalogClone = JSON.parse(JSON.stringify(catalogTemplate));
 					catalogClone.name = listName;
-					catalogClone.id = `external-${isUnified ? 'unified-' : ''}${listId}-${type}`;
+					catalogClone.id = `external-${isUnified ? 'unified-' : ''}${hasSearch ? 'withsearch-' : ''}${listId}-${type}`;
 					catalogClone.type = type;
+					if (hasSearch) {
+						catalogClone.extra.push({
+							name: 'search'
+						})
+						catalogClone.extraSupported.push('search')
+					}
 					catalogs.push(catalogClone);
 				});
 				manifestClone.catalogs = catalogs;
@@ -146,15 +157,30 @@ app.get('/unified-external/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.
 	getExternalManifest(req, res, true)
 });
 
-function getManifest(req, res, isUnified, isWatchlist) {
+app.get('/unified-watchlist-external/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
+	getExternalManifest(req, res, true, true)
+});
+
+app.get('/watchlist-external/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
+	getExternalManifest(req, res, false, true)
+});
+
+function getManifest(req, res, isUnified, isWatchlist, hasSearch) {
 	let catalogType = false
 	if (isUnified) {
 		catalogType = req.params.catalogType || 'mdblist'
 	}
+	const extraOpts = []
+	if (isUnified)
+		extraOpts.push('unified')
+	if (hasSearch)
+		extraOpts.push('withsearch')
+	if (isWatchlist)
+		extraOpts.push('watchlist')
 	if (isWatchlist) {
 		const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
 		manifestClone.name = 'MDBList'
-		manifestClone.id = `com.mdblist.${isUnified ? 'unified-' : ''}watchlist`
+		manifestClone.id = `com.mdblist.${extraOpts.join('-')}`
 		if (catalogType) {
 			manifestClone.types = [catalogType]
 		} else {
@@ -164,8 +190,14 @@ function getManifest(req, res, isUnified, isWatchlist) {
 		manifestClone.types.forEach(catType => {
 			const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 			catalogClone.name = 'Watchlist'
-			catalogClone.id = (isUnified ? 'unified2-' : '') + 'mdbwatchlist'
+			catalogClone.id = (isUnified ? 'unified2-' : '') + (hasSearch ? 'withsearch2-' : '') + 'mdbwatchlist'
 			catalogClone.type = catType
+			if (hasSearch) {
+				catalogClone.extra.push({
+					name: 'search'
+				})
+				catalogClone.extraSupported.push('search')
+			}
 			manifestClone.catalogs.push(catalogClone)
 		})
 		res.setHeader('Cache-Control', `public, max-age=${24 * 60 * 60}`)
@@ -198,15 +230,22 @@ function getManifest(req, res, isUnified, isWatchlist) {
 					}
 					if (types.length) {
 						const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
+						extraOpts.push(listId)
 						manifestClone.name = listName
-						manifestClone.id = `com.mdblist.${user}${isUnified ? 'unified-' : ''}-${listId}`
+						manifestClone.id = `com.mdblist.${user}${extraOpts.join('-')}`
 						manifestClone.types = types
 						const catalogs = []
 						types.forEach(type => {
 							const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 							catalogClone.name = listName
-							catalogClone.id = (isUnified ? 'unified-' : '') + listId+'-'+type
+							catalogClone.id = (isUnified ? 'unified-' : '') + (hasSearch ? 'withsearch-' : '') + listId+'-'+type
 							catalogClone.type = type
+							if (hasSearch) {
+								catalogClone.extra.push({
+									name: 'search'
+								})
+								catalogClone.extraSupported.push('search')
+							}
 							catalogs.push(catalogClone)
 						})
 						manifestClone.catalogs = catalogs
@@ -225,13 +264,14 @@ function getManifest(req, res, isUnified, isWatchlist) {
 			res.status(500).send('No such demo list')
 			return
 		}
+		extraOpts.push(list.id)
 		const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
 		manifestClone.name = list.name
-		manifestClone.id = `com.mdblist.${isUnified ? 'unified-' : ''}${list.id}`
+		manifestClone.id = `com.mdblist.${extraOpts.join('-')}`
 		manifestClone.types = [catalogType || list.type]
 		const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 		catalogClone.name = list.name
-		catalogClone.id = (isUnified ? 'unified2-' : '') + list.id
+		catalogClone.id = (isUnified ? 'unified2-' : '') + (hasSearch ? 'withsearch2-' : '') + list.id
 		catalogClone.type = catalogType || list.type
 		delete catalogClone.genres
 		catalogClone.extra = [
@@ -278,15 +318,22 @@ function getManifest(req, res, isUnified, isWatchlist) {
 					const manifestClone = JSON.parse(JSON.stringify(manifestTemplate))
 					const listName = body[0].name
 					const slug = body[0].slug
+					extraOpts.push(slug)
 					manifestClone.name = listName
-					manifestClone.id = `com.mdblist.${isUnified ? 'unified-' : ''}${slug}`
+					manifestClone.id = `com.mdblist.${extraOpts.join('-')}`
 					manifestClone.types = types
 					const catalogs = []
 					types.forEach(type => {
 						const catalogClone = JSON.parse(JSON.stringify(catalogTemplate))
 						catalogClone.name = listName
-						catalogClone.id = (isUnified ? 'unified3-' : '') + slug+'-'+type
+						catalogClone.id = (isUnified ? 'unified3-' : '') + (hasSearch ? 'withsearch3-' : '') + slug+'-'+type
 						catalogClone.type = type
+						if (hasSearch) {
+							catalogClone.extra.push({
+								name: 'search'
+							})
+							catalogClone.extraSupported.push('search')
+						}
 						catalogs.push(catalogClone)
 					})
 					manifestClone.catalogs = catalogs
@@ -306,8 +353,20 @@ app.get('/unified/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.json', (r
 	getManifest(req, res, true, false)
 })
 
+app.get('/withsearch/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
+	getManifest(req, res, false, false, true)
+})
+
+app.get('/unified-withsearch/:listIds/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
+	getManifest(req, res, true, false, true)
+})
+
 app.get('/unified-watchlist/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
 	getManifest(req, res, true, true)
+})
+
+app.get('/unified-withsearch-watchlist/:mdbListKey/:catalogType/:userKey?/manifest.json', (req, res) => {
+	getManifest(req, res, true, true, true)
 })
 
 app.get('/watchlist/:mdbListKey/:userKey?/manifest.json', (req, res) => {
@@ -431,10 +490,14 @@ function getExternalList(req, res, isUnified) {
 	const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {};
 	const skip = parseInt(extra.skip || 0);
 	const genre = extra.genre;
+	const search = extra.search;
 
 	let url = `https://api.mdblist.com/external/lists/${listId}/items?apikey=${mdbListKey}&limit=${perPage}&offset=${skip}&append_to_response=genre`;
 	if (genre) {
 		url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`;
+	}
+	if (search) {
+		url += `&filter_title=${encodeURIComponent(search)}`;
 	}
 	if (isUnified) {
 		url += `&unified=true`
@@ -483,6 +546,14 @@ app.get('/unified-external/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:
 	getExternalList(req, res, true)
 });
 
+app.get('/unified-withsearch-external/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getExternalList(req, res, true)
+});
+
+app.get('/withsearch-external/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getExternalList(req, res, false)
+});
+
 app.get('/external/:listIds/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
 	getExternalList(req, res, false)
 });
@@ -502,6 +573,7 @@ function getList(req, res, isUnified, isWatchlist) {
 		const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
 		const skip = parseInt(extra.skip || 0)
 		const genre = extra.genre
+		const search = extra.search
 		const type = req.params.type
 		const mdbListType = type === 'movie' ? 'movie' : 'show'
 
@@ -511,10 +583,14 @@ function getList(req, res, isUnified, isWatchlist) {
 			url = `https://api.mdblist.com/watchlist/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
 			if (genre)
 				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+			if (search)
+				url += `&filter_title=${encodeURIComponent(search)}`
 		} else {
 			url = `https://api.mdblist.com/watchlist/items?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
 			if (genre)
 				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+			if (search)
+				url += `&filter_title=${encodeURIComponent(search)}`
 			url += `&unified=true`
 		}
 
@@ -583,6 +659,7 @@ function getList(req, res, isUnified, isWatchlist) {
 		const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
 		const skip = parseInt(extra.skip || 0)
 		const genre = extra.genre
+		const search = extra.search
 		const type = req.params.type
 		const mdbListType = type === 'movie' ? 'movie' : 'show'
 
@@ -592,10 +669,14 @@ function getList(req, res, isUnified, isWatchlist) {
 			url = `https://api.mdblist.com/lists/${user}/${listId}/items/${mdbListType}?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
 			if (genre)
 				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+			if (search)
+				url += `&filter_title=${encodeURIComponent(search)}`
 		} else {
 			url = `https://api.mdblist.com/lists/${user}/${listId}/items?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
 			if (genre)
 				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+			if (search)
+				url += `&filter_title=${encodeURIComponent(search)}`
 			url += `&unified=true`
 		}
 
@@ -705,11 +786,14 @@ function getList(req, res, isUnified, isWatchlist) {
 		const extra = req.params.extra ? qs.parse(req.url.split('/').pop().slice(0, -5)) : {}
 		const skip = parseInt(extra.skip || 0)
 		const genre = extra.genre
+		const search = extra.search
 		const type = req.params.type
 		if (listIds.length === 1) {
 			let url = `https://api.mdblist.com/lists/${listIds[0]}/items/?apikey=${mdbListKey}&limit=${perPage}&offset=${(skip || 0)}&append_to_response=genre`
 			if (genre)
 				url += `&filter_genre=${encodeURIComponent(genre.toLowerCase())}`
+			if (search)
+				url += `&filter_title=${encodeURIComponent(search)}`
 			if (isUnified) {
 				url += `&unified=true`
 			}
@@ -728,6 +812,7 @@ function getList(req, res, isUnified, isWatchlist) {
 							res.json({ metas: [] });
 							return;
 						}
+
 						getCinemetaForIds(type, items.map(el => el.imdb_id), (metasDetailed) => {
 							if (metasDetailed.length) {
 								res.json({
@@ -763,11 +848,27 @@ app.get('/unified-watchlist/:mdbListKey/:catalogType/:userKey?/catalog/:type/:sl
 	getList(req, res, true, true)
 })
 
+app.get('/withsearch-watchlist/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getList(req, res, false, true)
+})
+
+app.get('/unified-withsearch-watchlist/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getList(req, res, true, true)
+})
+
 app.get('/watchlist/:mdbListKey/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
 	getList(req, res, false, true)
 })
 
 app.get('/unified/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getList(req, res, true, false)
+})
+
+app.get('/withsearch/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
+	getList(req, res, false, false)
+})
+
+app.get('/unified-withsearch/:listIds/:mdbListKey/:catalogType/:userKey?/catalog/:type/:slug/:extra?.json', (req, res) => {
 	getList(req, res, true, false)
 })
 

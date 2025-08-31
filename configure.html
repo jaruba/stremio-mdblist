@@ -105,6 +105,11 @@
                     <label for="notunified">Separate Catalogs for Movies and Series</label>
                 </center>
                 <br/><br/>
+                <center>
+                    <input type="checkbox" id="withsearch" name="withsearch" />
+                    <label for="withsearch">Include Search for Each Catalog</label>
+                </center>
+                <br/><br/>
             </div>
             <div id="opts-holder" style="display: none">
             </div>
@@ -166,10 +171,17 @@
                                     if (rpdbApiKey) {
                                         listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
                                     }
-                                    if (!$('#notunified').is(':checked')) {
-                                        listLink = `stremio://${addonDomain}/unified/${list.id}/${apiKey}/mdblist/manifest.json`
+                                    const notunified = !!$('#notunified').is(':checked')
+                                    const withsearch = !!$('#withsearch').is(':checked')
+                                    const extraOpts = []
+                                    if (!notunified)
+                                        extraOpts.push('unified')
+                                    if (withsearch)
+                                        extraOpts.push('withsearch')
+                                    if (extraOpts.length) {
+                                        listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/manifest.json`
                                         if (rpdbApiKey) {
-                                            listLink = `stremio://${addonDomain}/unified/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
+                                            listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
                                         }
                                     }
                                     return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
@@ -190,10 +202,18 @@
                                             if (rpdbApiKey) {
                                                 listLink = `stremio://${addonDomain}/external/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
                                             }
-                                            if (!$('#notunified').is(':checked')) {
-                                                listLink = `stremio://${addonDomain}/unified-external/${list.id}/${apiKey}/mdblist/manifest.json`
+                                            const notunified = !!$('#notunified').is(':checked')
+                                            const withsearch = !!$('#withsearch').is(':checked')
+                                            const extraOpts = []
+                                            if (!notunified)
+                                                extraOpts.push('unified')
+                                            if (withsearch)
+                                                extraOpts.push('withsearch')
+                                            extraOpts.push('external')
+                                            if (extraOpts.length) {
+                                                listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/manifest.json`
                                                 if (rpdbApiKey) {
-                                                    listLink = `stremio://${addonDomain}/unified-external/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
+                                                    listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
                                                 }
                                             }
                                             return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
@@ -217,6 +237,11 @@
             }
             $(document).ready(function() {
                 $('#notunified').change(function() {
+                    setTimeout(function() {
+                        load_api_key();
+                    }, 0);
+                });
+                $('#withsearch').change(function() {
                     setTimeout(function() {
                         load_api_key();
                     }, 0);
