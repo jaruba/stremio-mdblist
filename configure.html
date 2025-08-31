@@ -89,12 +89,6 @@
                     Error: RPDB API key is not valid, please try again.
                     <br/><br/><br/>
                 </div>
-                <div id="list-empty-error" style="display: none; opacity: 0.7">
-                    <span style="width: 588px; max-width: 90%; display: inline-block">
-                        <b>Your MDBList personal lists are empty, if you recently created your account it can take a bit of time, please try again later.</b>
-                    </span>
-                    <br/><br/><br/>
-                </div>
                 <span class="pure-form-message-inline" id="footer-buttons">
                     <form action="/demo_lists" style="display: inline-block">
                         &nbsp;<button type="submit" class="pure-button pure-button-primary-reverse">Demo Lists</button>
@@ -117,24 +111,32 @@
                 </center>
                 <br/>
                 <center>
-                    <a href="#" id="other-user-list">Add a List From Another MDBList User &raquo;</a>
+                    <a href="#" class="other-user-list">Add a List From Another MDBList User &raquo;</a>
                 </center>
-                <br/><br/>
+                <br/>
             </div>
-            <div id="other-opts-title" style="display: none">
-                <h3>Other User Lists</h3>
-            </div>
+            <h3 class="cat-titles" style="display:none">Other User Lists</h3>
             <div id="other-opts-holder" style="display: none">
             </div>
-            <div id="opts-holder-title" style="display: none">
-                <h3>Personal Lists</h3>
-            </div>
+            <h3 class="cat-titles" style="display:none">Personal Lists</h3>
             <div id="opts-holder" style="display: none">
             </div>
-            <div id="ext-opts-title" style="display: none">
-                <h3>External Lists</h3>
-            </div>
+            <h3 class="cat-titles" style="display:none">External Lists</h3>
             <div id="ext-opts-holder" style="display: none">
+            </div>
+            <br/><br/>
+            <div id="list-empty-error" style="display: none; opacity: 0.7">
+                <span style="width: 588px; max-width: 90%; display: inline-block">
+                    <b>Your MDBList personal lists are empty, if you recently created your account it can take a bit of time, try using the "Reload Lists" button a bit later.</b>
+                </span>
+                <br/><br/>
+            </div>
+            <div id="reload-button" style="display: none">
+                <form class="pure-form pure-form-aligned" onsubmit="load_api_key();return false">
+                    <span class="pure-form-message-inline">
+                        &nbsp;<button type="submit" class="pure-button pure-button-primary">Reload Lists</button>
+                    </span>
+                </form>
             </div>
             <br/><br/>
         </center>
@@ -166,8 +168,6 @@
                     $('#api-key-error-2').hide()
                 if ($('#rpdb-api-key-error').is(':visible'))
                     $('#rpdb-api-key-error').hide()
-                if ($('#list-empty-error').is(':visible'))
-                    $('#list-empty-error').hide()
                 if (!apiKey) {
                     $('#api-key-error-1').show()
                     return
@@ -200,42 +200,48 @@
                         }
                         function processLists() {
                             if (personalDone && externalDone) {
-                                if (!data.length && !extData.length) {
-                                    $('#list-empty-error').show()
-                                    return;
-                                }
-                                // personal lists start
-                                $('#settings-holder').show()
-                                let colorId = 0
-                                data = data.map(list => {
-                                    colorId = colorId === 1 ? 0 : 1
-                                    const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
-                                    let listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/manifest.json`
-                                    if (rpdbApiKey) {
-                                        listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
-                                    }
-                                    const notunified = !!$('#notunified').is(':checked')
-                                    const withsearch = !!$('#withsearch').is(':checked')
-                                    const extraOpts = []
-                                    if (!notunified)
-                                        extraOpts.push('unified')
-                                    if (withsearch)
-                                        extraOpts.push('withsearch')
-                                    if (extraOpts.length) {
-                                        listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/manifest.json`
-                                        if (rpdbApiKey) {
-                                            listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
-                                        }
-                                    }
-                                    return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
-                                })
+                                data = []
+                                extData = []
                                 $('#addon-description').hide()
                                 $('#footer-buttons').hide()
                                 $('#api-key-form').hide()
-                                $('#opts-holder').empty()
-                                $('#opts-holder').append(data.join(''))
-                                $('#opts-holder').show()
-                                $('#opts-holder-title').show()
+                                $('.cat-titles').show()
+                                $('#reload-button').show()
+
+                                // personal lists start
+                                $('#settings-holder').show()
+                                if (data.length) {
+                                    let colorId = 0
+                                    data = data.map(list => {
+                                        colorId = colorId === 1 ? 0 : 1
+                                        const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
+                                        let listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/manifest.json`
+                                        if (rpdbApiKey) {
+                                            listLink = `stremio://${addonDomain}/${list.id}/${apiKey}/${rpdbApiKey}/manifest.json`
+                                        }
+                                        const notunified = !!$('#notunified').is(':checked')
+                                        const withsearch = !!$('#withsearch').is(':checked')
+                                        const extraOpts = []
+                                        if (!notunified)
+                                            extraOpts.push('unified')
+                                        if (withsearch)
+                                            extraOpts.push('withsearch')
+                                        if (extraOpts.length) {
+                                            listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/manifest.json`
+                                            if (rpdbApiKey) {
+                                                listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
+                                            }
+                                        }
+                                        return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.name} (${(list.items||0)+(list.items_show||0)} items)</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                                    })
+                                    $('#opts-holder').empty()
+                                    $('#opts-holder').append(data.join(''))
+                                    $('#opts-holder').show()
+                                } else {
+                                    $('#opts-holder').empty()
+                                    $('#opts-holder').append('This category is empty. Create new lists on the <a href="https://mdblist.com/" target="_blank">MDBList site</a>.')
+                                    $('#opts-holder').show()
+                                }
                                 // personal lists end
 
                                 // external lists start
@@ -267,7 +273,10 @@
                                     $('#ext-opts-holder').empty()
                                     $('#ext-opts-holder').append(extData.join(''))
                                     $('#ext-opts-holder').show()
-                                    $('#ext-opts-title').show()
+                                } else {
+                                    $('#ext-opts-holder').empty()
+                                    $('#ext-opts-holder').append('This category is empty. Add new lists here from <a href="https://mdblist.com/mylists/#external_lists" target="_blank">this MDBList page</a>.')
+                                    $('#ext-opts-holder').show()
                                 }
                                 // external lists end
                                 if (otherUserLists.length) {
@@ -299,7 +308,15 @@
                                     $('#other-opts-holder').empty()
                                     $('#other-opts-holder').append(otherData.join(''))
                                     $('#other-opts-holder').show()
-                                    $('#other-opts-title').show()
+                                } else {
+                                    $('#other-opts-holder').empty()
+                                    $('#other-opts-holder').append('This category is empty. Add lists from other users by <a href="#" class="other-user-list">pressing here</a>.')
+                                    $('#other-opts-holder').show()
+                                    $('.other-user-list').off().on('click', otherUserListClick);
+                                }
+                                $('#list-empty-error').hide()
+                                if (!data.length && !extData.length && !otherUserLists.length) {
+                                    $('#list-empty-error').show()
                                 }
                             }
                         }
@@ -325,6 +342,29 @@
                }
                return splitStr.join(' '); 
             }
+            function otherUserListClick() {
+                let otherUrl = prompt('Paste URL to a different user\'s list\nThe URL must start with "https://mdblist.com/lists/"', 'https://mdblist.com/lists/garycrawfordgc/latest-tv-shows')
+                if ((otherUrl || '').startsWith('https://mdblist.com/lists/')) {
+                    const parsedUrl = otherUrl.replace('https://mdblist.com/lists/', '').split('/')
+                    if (parsedUrl.length < 2) {
+                        alert('The user list URL is invalid, please ensure you copied the URL correctly from the MDBList site');
+                        return;
+                    }
+                    const userId = parsedUrl[0]
+                    const listId = parsedUrl[1]
+                    const listName = titleCase(listId.split('-').join(' '))
+                    otherUserLists.push({
+                        userId,
+                        listId,
+                        listName,
+                    })
+                    setTimeout(function() {
+                        load_api_key();
+                    }, 0);
+                } else {
+                    alert('The user list URL is invalid, the URL must start with "https://mdblist.com/lists/"');
+                }
+            }
             const otherUserLists = []
             $(document).ready(function() {
                 $('#notunified').change(function() {
@@ -337,29 +377,7 @@
                         load_api_key();
                     }, 0);
                 });
-                $('#other-user-list').on('click', function() {
-                    let otherUrl = prompt('Paste URL to a different user\'s list\nThe URL must start with "https://mdblist.com/lists/"', 'https://mdblist.com/lists/garycrawfordgc/latest-tv-shows')
-                    if ((otherUrl || '').startsWith('https://mdblist.com/lists/')) {
-                        const parsedUrl = otherUrl.replace('https://mdblist.com/lists/', '').split('/')
-                        if (parsedUrl.length < 2) {
-                            alert('The user list URL is invalid, please ensure you copied the URL correctly from the MDBList site');
-                            return;
-                        }
-                        const userId = parsedUrl[0]
-                        const listId = parsedUrl[1]
-                        const listName = titleCase(listId.split('-').join(' '))
-                        otherUserLists.push({
-                            userId,
-                            listId,
-                            listName,
-                        })
-                        setTimeout(function() {
-                            load_api_key();
-                        }, 0);
-                    } else {
-                        alert('The user list URL is invalid, the URL must start with "https://mdblist.com/lists/"');
-                    }
-                });
+                $('.other-user-list').on('click', otherUserListClick);
             });
         </script>
     </body>
