@@ -259,8 +259,8 @@
                                             extraOpts.push('unified')
                                         if (withsearch)
                                             extraOpts.push('withsearch')
-                                        extraOpts.push('external')
                                         if (extraOpts.length) {
+                                            extraOpts.push('external')
                                             listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/manifest.json`
                                             if (rpdbApiKey) {
                                                 listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.id}/${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
