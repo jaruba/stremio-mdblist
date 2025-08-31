@@ -115,12 +115,24 @@
                     <input type="checkbox" id="withsearch" name="withsearch" />
                     <label for="withsearch">Include Search for Each Catalog</label>
                 </center>
+                <br/>
+                <center>
+                    <a href="#" id="other-user-list">Add a List From Another MDBList User &raquo;</a>
+                </center>
                 <br/><br/>
+            </div>
+            <div id="other-opts-title" style="display: none">
+                <h3>Other User Lists</h3>
+            </div>
+            <div id="other-opts-holder" style="display: none">
+            </div>
+            <div id="opts-holder-title" style="display: none">
+                <h3>Personal Lists</h3>
             </div>
             <div id="opts-holder" style="display: none">
             </div>
             <div id="ext-opts-title" style="display: none">
-                <h2>External Lists</h2>
+                <h3>External Lists</h3>
             </div>
             <div id="ext-opts-holder" style="display: none">
             </div>
@@ -223,6 +235,7 @@
                                 $('#opts-holder').empty()
                                 $('#opts-holder').append(data.join(''))
                                 $('#opts-holder').show()
+                                $('#opts-holder-title').show()
                                 // personal lists end
 
                                 // external lists start
@@ -257,6 +270,37 @@
                                     $('#ext-opts-title').show()
                                 }
                                 // external lists end
+                                if (otherUserLists.length) {
+
+                                    let colorId = 0
+                                    const otherData = otherUserLists.map(list => {
+                                        colorId = colorId === 1 ? 0 : 1
+                                        const color = colorId === 1 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'
+                                        let listLink = `stremio://${addonDomain}/${list.listId}/userapi-${list.userId}-${apiKey}/manifest.json`
+                                        if (rpdbApiKey) {
+                                            listLink = `stremio://${addonDomain}/${list.listId}/userapi-${list.userId}-${apiKey}/${rpdbApiKey}/manifest.json`
+                                        }
+                                        const notunified = !!$('#notunified').is(':checked')
+                                        const withsearch = !!$('#withsearch').is(':checked')
+                                        const extraOpts = []
+                                        if (!notunified)
+                                            extraOpts.push('unified')
+                                        if (withsearch)
+                                            extraOpts.push('withsearch')
+                                        if (extraOpts.length) {
+                                            listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.listId}/userapi-${list.userId}-${apiKey}/mdblist/manifest.json`
+                                            if (rpdbApiKey) {
+                                                listLink = `stremio://${addonDomain}/${extraOpts.join('-')}/${list.listId}/userapi-${list.userId}-${apiKey}/mdblist/${rpdbApiKey}/manifest.json`
+                                            }
+                                        }
+                                        return `<div style="background-color: ${color}"><div style="width: 80%; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding: 10px 0; vertical-align: top;">${list.listName} (${list.userId})</div><div style="width: 15%; display: inline-block; padding: 10px 0; vertical-align: top;"><a href="${listLink}" target="_blank">Install</a></div></div>`
+                                    })
+
+                                    $('#other-opts-holder').empty()
+                                    $('#other-opts-holder').append(otherData.join(''))
+                                    $('#other-opts-holder').show()
+                                    $('#other-opts-title').show()
+                                }
                             }
                         }
                         $.get(`https://api.mdblist.com/lists/user/?apikey=${apiKey}&break=${Date.now()}`,
@@ -274,6 +318,14 @@
                 })
 
             }
+            function titleCase(str) {
+               var splitStr = str.toLowerCase().split(' ');
+               for (var i = 0; i < splitStr.length; i++) {
+                   splitStr[i] = splitStr[i].charAt(0).toUpperCase() + splitStr[i].substring(1);     
+               }
+               return splitStr.join(' '); 
+            }
+            const otherUserLists = []
             $(document).ready(function() {
                 $('#notunified').change(function() {
                     setTimeout(function() {
@@ -284,6 +336,29 @@
                     setTimeout(function() {
                         load_api_key();
                     }, 0);
+                });
+                $('#other-user-list').on('click', function() {
+                    let otherUrl = prompt('Paste URL to a different user\'s list\nThe URL must start with "https://mdblist.com/lists/"', 'https://mdblist.com/lists/garycrawfordgc/latest-tv-shows')
+                    if ((otherUrl || '').startsWith('https://mdblist.com/lists/')) {
+                        const parsedUrl = otherUrl.replace('https://mdblist.com/lists/', '').split('/')
+                        if (parsedUrl.length < 2) {
+                            alert('The user list URL is invalid, please ensure you copied the URL correctly from the MDBList site');
+                            return;
+                        }
+                        const userId = parsedUrl[0]
+                        const listId = parsedUrl[1]
+                        const listName = titleCase(listId.split('-').join(' '))
+                        otherUserLists.push({
+                            userId,
+                            listId,
+                            listName,
+                        })
+                        setTimeout(function() {
+                            load_api_key();
+                        }, 0);
+                    } else {
+                        alert('The user list URL is invalid, the URL must start with "https://mdblist.com/lists/"');
+                    }
                 });
             });
         </script>
