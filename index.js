@@ -382,16 +382,29 @@ app.get('/:listIds/:mdbListKey/:userKey?/manifest.json', (req, res) => {
 })
 
 function mdbToStremio(userKey, obj) {
+	const imdbId = getImdbId(obj)
+	if (!imdbId) return null
 	return {
-		id: obj.imdb_id,
-		imdb_id: obj.imdb_id,
+		id: imdbId,
+		imdb_id: imdbId,
 		name: obj.title,
 		releaseInfo: obj.release_year + '',
 		type: obj.mediatype === 'show' ? 'series' : 'movie',
-		poster: userKey ? `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${obj.imdb_id}.jpg?fallback=true` : `https://images.metahub.space/poster/small/${obj.imdb_id}/img`,
-		logo: `https://images.metahub.space/logo/medium/${obj.imdb_id}/img`,
-		background: `https://images.metahub.space/background/medium/${obj.imdb_id}/img`,
+		poster: userKey ? `https://api.ratingposterdb.com/${userKey}/imdb/poster-default/${imdbId}.jpg?fallback=true` : `https://images.metahub.space/poster/small/${imdbId}/img`,
+		logo: `https://images.metahub.space/logo/medium/${imdbId}/img`,
+		background: `https://images.metahub.space/background/medium/${imdbId}/img`,
 	}
+}
+
+function getImdbId(obj) {
+	const id = obj && (obj.imdb_id || obj.imdbId || obj.imdb)
+	if (typeof id !== 'string') return null
+	if (!id.startsWith('tt')) return null
+	return id
+}
+
+function hasImdbId(obj) {
+	return !!getImdbId(obj)
 }
 
 function getCinemetaForIds(type, ids, cb) {
@@ -406,8 +419,8 @@ const perPage = 100
 function unifiedList(req, res, mdbBody, userKey) {
 	if (isArray(mdbBody) && mdbBody[0].title) {
 		let firstType = 'movie'
-		let items1 = mdbBody.filter(el => el.mediatype === 'movie').filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr')))
-		let items2 = mdbBody.filter(el => el.mediatype === 'show').filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr')))
+		let items1 = mdbBody.filter(el => el.mediatype === 'movie').filter(hasImdbId)
+		let items2 = mdbBody.filter(el => el.mediatype === 'show').filter(hasImdbId)
 		if (!items1.length && !items2.length) {
 			res.json({ metas: [] });
 			return
@@ -417,11 +430,11 @@ function unifiedList(req, res, mdbBody, userKey) {
 			items2 = []
 			firstType = 'series'
 		}
-		items1 = items1.map(mdbToStremio.bind(null, userKey));
-		items2 = items2.map(mdbToStremio.bind(null, userKey));
+		items1 = items1.map(mdbToStremio.bind(null, userKey)).filter(Boolean);
+		items2 = items2.map(mdbToStremio.bind(null, userKey)).filter(Boolean);
 		function orderList(metasDetailed) {
 			const newList = []
-			mdbBody.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey)).forEach(el => {
+			mdbBody.filter(hasImdbId).map(mdbToStremio.bind(null, userKey)).filter(Boolean).forEach(el => {
 				const item = metasDetailed.find(elm => elm.id === el.id)
 				if (item) {
 					newList.push(item)
@@ -516,7 +529,7 @@ function getExternalList(req, res, isUnified) {
 				const body = ((mdbBody || {})[mdbType] || []).length ? mdbBody[mdbType] : mdbBody; // Fallback to raw body if no movies/shows key
 				if (isArray(body) && body[0].title) {
 					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`);
-					const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey));
+					const items = body.filter(hasImdbId).map(mdbToStremio.bind(null, userKey)).filter(Boolean);
 					if (!items.length) {
 						res.json({ metas: [] });
 						return;
@@ -608,7 +621,7 @@ function getList(req, res, isUnified, isWatchlist) {
 				body = (mdbBody || {})[mdbType]
 				if (isArray(body) && body[0].title) {
 					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
-					const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
+					const items = body.filter(hasImdbId).map(mdbToStremio.bind(null, userKey)).filter(Boolean)
 					if (!items.length) {
 						res.json({ metas: [] });
 						return;
@@ -694,7 +707,7 @@ function getList(req, res, isUnified, isWatchlist) {
 				body = (mdbBody || {})[mdbType]
 				if (isArray(body) && body[0].title) {
 					res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
-					const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
+					const items = body.filter(hasImdbId).map(mdbToStremio.bind(null, userKey)).filter(Boolean)
 					if (!items.length) {
 						res.json({ metas: [] });
 						return;
@@ -746,7 +759,7 @@ function getList(req, res, isUnified, isWatchlist) {
 					return;
 				}
 				res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
-				const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
+				const items = body.filter(hasImdbId).map(mdbToStremio.bind(null, userKey)).filter(Boolean)
 				if (!items.length) {
 					res.json({ metas: [] });
 					return;
@@ -811,7 +824,7 @@ function getList(req, res, isUnified, isWatchlist) {
 					body = (mdbBody || {})[mdbType]
 					if (isArray(body) && body[0].title) {
 						res.setHeader('Cache-Control', `public, max-age=${1 * 60 * 60}`)
-						const items = body.filter(el => (!!el.imdb_id && !el.imdb_id.startsWith('tr'))).map(mdbToStremio.bind(null, userKey))
+						const items = body.filter(hasImdbId).map(mdbToStremio.bind(null, userKey)).filter(Boolean)
 						if (!items.length) {
 							res.json({ metas: [] });
 							return;
